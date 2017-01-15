@@ -25,20 +25,33 @@ func (e *TreeExpr) Eval(vm *Vm) (obj Object, err error) {
 }
 
 type IfExpr struct {
-	Condition Expression
+	IfCond    Expression
 	IfBlock   Expression
+	ElseCond  Expression
 	ElseBlock Expression
 }
 
 func (e *IfExpr) Eval(vm *Vm) (Object, error) {
-	obj, err := e.Condition.Eval(vm)
+	obj, err := e.IfCond.Eval(vm)
 	if err != nil {
 		return nil, err
 	}
 	if GetBoolValue(obj) {
-		return e.IfBlock.Eval(vm)
+		if e.IfBlock != nil {
+			return e.IfBlock.Eval(vm)
+		}
+	} else if e.ElseCond != nil {
+		obj, err := e.ElseCond.Eval(vm)
+		if err != nil {
+			return nil, err
+		}
+		if GetBoolValue(obj) {
+			if e.ElseBlock != nil {
+				return e.ElseBlock.Eval(vm)
+			}
+		}
 	}
-	return e.ElseBlock.Eval(vm)
+	return nil, nil
 }
 
 type ForExpr struct {

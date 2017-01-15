@@ -1,2 +1,11 @@
 a = 1
 b = 1
+N = 10
+i = 0
+for i < N {
+    print(a b)
+    tmp = b
+    b = a + b
+    a = tmp
+	i = i + 1
+}

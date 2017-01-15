@@ -1,6 +1,7 @@
 package mini
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -48,17 +49,7 @@ func (p *Parser) accept(tt TokenType) bool {
 }
 
 func (p *Parser) Parse() (Expression, error) {
-	ast := &TreeExpr{}
-	for {
-		expr, err := p.parseExpression(false)
-		if err != nil {
-			return nil, err
-		}
-		if expr == nil {
-			return ast, nil
-		}
-		ast.Children = append(ast.Children, expr)
-	}
+	return p.parseExpressionBlock(false)
 }
 
 func (p *Parser) parseExpression(expect bool) (Expression, error) {
@@ -97,10 +88,10 @@ func (p *Parser) parseExpression(expect bool) (Expression, error) {
 		expr, err = p.parseUnaryExpression(tok.Type)
 	case ROUNDOPEN:
 		expr, err = p.parseParenthesizedExpression()
-		// case IF:
-		// 	expr, err = p.parseIfExpression()
-		// case FOR:
-		// 	expr, err = p.parseForExpression()
+	case IF:
+		expr, err = p.parseIfExpression()
+	case FOR:
+		expr, err = p.parseForExpression()
 	}
 	// Short-circuit if we have an error at this point
 	if err != nil {
@@ -164,6 +155,66 @@ func (p *Parser) parseParenthesizedExpression() (Expression, error) {
 	expressions, err := p.parseExpressionList()
 	if err != nil {
 		return nil, err
+	}
+	return &TreeExpr{Children: expressions}, nil
+}
+
+func (p *Parser) parseForExpression() (Expression, error) {
+	forCond, forBlock, err := p.parseConditional()
+	if err != nil {
+		return nil, err
+	}
+	return &ForExpr{Condition: forCond, Block: forBlock}, nil
+}
+
+func (p *Parser) parseIfExpression() (Expression, error) {
+	ifCond, ifBlock, err := p.parseConditional()
+	if err != nil {
+		return nil, err
+	}
+	expr := IfExpr{IfCond: ifCond, IfBlock: ifBlock}
+	if p.accept(ELSE) {
+		elseCond, elseBlock, err := p.parseConditional()
+		if err != nil {
+			return nil, err
+		}
+		expr.ElseCond = elseCond
+		expr.ElseBlock = elseBlock
+	}
+	return &expr, nil
+}
+
+func (p *Parser) parseConditional() (cond Expression, block Expression, err error) {
+	if p.accept(CURLYOPEN) {
+		// skip the condition block
+		cond = &ConstExpr{Value: BoolObject(true)}
+	} else {
+		cond, err = p.parseExpression(true)
+		if err != nil {
+			return
+		}
+		if !p.accept(CURLYOPEN) {
+			err = errors.New("Expected block")
+		}
+	}
+	block, err = p.parseExpressionBlock(true)
+	return
+}
+
+func (p *Parser) parseExpressionBlock(enclosed bool) (Expression, error) {
+	var expressions []Expression
+	for {
+		if enclosed && p.accept(CURLYCLOSE) {
+			break
+		}
+		expr, err := p.parseExpression(false)
+		if err != nil {
+			return nil, err
+		}
+		if expr == nil {
+			break
+		}
+		expressions = append(expressions, expr)
 	}
 	return &TreeExpr{Children: expressions}, nil
 }
