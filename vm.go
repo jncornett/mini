@@ -3,12 +3,14 @@ package mini
 import (
 	"fmt"
 	"io"
+	"log"
 	"strings"
 )
 
 type Vm struct {
 	Symbols map[string]Object
 	Result  Object
+	Debug   bool
 }
 
 func NewVm() *Vm {
@@ -19,10 +21,16 @@ func NewVm() *Vm {
 
 func (vm *Vm) Eval(r io.Reader) error {
 	expr, err := NewParser(r).Parse()
+	if vm.Debug {
+		log.Println("AST:", expr)
+	}
 	if err != nil {
 		return err
 	}
 	vm.Result, err = expr.Eval(vm)
+	if vm.Debug {
+		log.Println("Symbols:", vm.Symbols)
+	}
 	return err
 }
 

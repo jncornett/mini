@@ -97,6 +97,10 @@ func (p *Parser) parseExpression(expect bool) (Expression, error) {
 		expr, err = p.parseUnaryExpression(tok.Type)
 	case ROUNDOPEN:
 		expr, err = p.parseParenthesizedExpression()
+		// case IF:
+		// 	expr, err = p.parseIfExpression()
+		// case FOR:
+		// 	expr, err = p.parseForExpression()
 	}
 	// Short-circuit if we have an error at this point
 	if err != nil {

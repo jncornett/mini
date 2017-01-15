@@ -75,7 +75,7 @@ type AssignExpr struct {
 
 func (e *AssignExpr) Eval(vm *Vm) (obj Object, err error) {
 	obj, err = e.RHS.Eval(vm)
-	if err != nil {
+	if err == nil {
 		vm.Assign(e.LHSSymbol, obj)
 	}
 	return
