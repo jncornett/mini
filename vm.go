@@ -26,7 +26,7 @@ func (vm *Vm) Eval(r io.Reader) error {
 	return err
 }
 
-func (vm Vm) EvalString(s string) error {
+func (vm *Vm) EvalString(s string) error {
 	return vm.Eval(strings.NewReader(s))
 }
 
