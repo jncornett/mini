@@ -11,11 +11,26 @@ type Callable interface {
 	Call([]Object) (Object, error)
 }
 
-type Function func([]Object) (Object, error)
+type FunctionObject func([]Object) (Object, error)
 
-func (fn Function) Call(args []Object) (Object, error) {
+func (o FunctionObject) BoolValue() bool    { return o == nil }
+func (o FunctionObject) Value() interface{} { return o }
+func (fn FunctionObject) Call(args []Object) (Object, error) {
 	return fn(args)
 }
 
-func (fn Function) BoolValue() bool    { return fn == nil }
-func (fn Function) Value() interface{} { return fn }
+type StringObject string
+
+func (o StringObject) BoolValue() bool    { return true }
+func (o StringObject) Value() interface{} { return string(o) }
+
+// FIXME need to transparently support floating point
+type NumberObject int
+
+func (o NumberObject) BoolValue() bool    { return true }
+func (o NumberObject) Value() interface{} { return int(o) }
+
+type BoolObject bool
+
+func (o BoolObject) BoolValue() bool    { return bool(o) }
+func (o BoolObject) Value() interface{} { return bool(o) }

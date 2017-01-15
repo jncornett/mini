@@ -4,7 +4,7 @@ import "fmt"
 
 type StdlibEntry struct {
 	Name string
-	Func Function
+	Func FunctionObject
 }
 
 func GetStdlib() []StdlibEntry {

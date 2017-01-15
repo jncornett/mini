@@ -23,6 +23,7 @@ type Token struct {
 const (
 	// Special tokens
 	ILLEGAL TokenType = iota
+	START
 	EOF
 	WS
 
