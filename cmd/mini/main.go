@@ -18,9 +18,11 @@ func main() {
 	for {
 		fmt.Print(prompt)
 		code, _ := r.ReadString('\n')
-		err := vm.Eval(code)
+		err := vm.EvalString(code)
 		if err != nil {
 			fmt.Println(err)
+		} else {
+			fmt.Println(vm.Result)
 		}
 	}
 }

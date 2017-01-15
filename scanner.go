@@ -57,11 +57,8 @@ const (
 	IF
 	ELSE
 	FOR
-	FUNC
 	BREAK
 	CONTINUE
-	RETURN
-	YIELD
 	AND
 	OR
 )
@@ -212,16 +209,10 @@ func (s *Scanner) scanIdent(first rune, start Position) Token {
 		tok = ELSE
 	case "for":
 		tok = FOR
-	case "func":
-		tok = FUNC
 	case "break":
 		tok = BREAK
 	case "continue":
 		tok = CONTINUE
-	case "return":
-		tok = RETURN
-	case "yield":
-		tok = YIELD
 	case "and":
 		tok = AND
 	case "or":
