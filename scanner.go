@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-const EOFCHAR = rune(0)
+const eofChar = rune(0)
 
 type TokenType int
 
@@ -87,7 +87,7 @@ func (s *Scanner) Scan() Token {
 		return s.scanNumberLiteral(ch, start)
 	} else if ch == '"' {
 		return s.scanStringLiteral(start)
-	} else if ch == EOFCHAR {
+	} else if ch == eofChar {
 		return Token{EOF, "", start, s.pos}
 	}
 
@@ -156,7 +156,7 @@ func (s *Scanner) Scan() Token {
 func (s *Scanner) readRune() rune {
 	ch, _, err := s.r.ReadRune()
 	if err != nil {
-		ch = EOFCHAR
+		ch = eofChar
 	}
 	s.lastPos = s.pos
 	if ch == '\n' {
@@ -232,7 +232,7 @@ func (s *Scanner) scanStringLiteral(start Position) Token {
 	escape := false
 	for {
 		ch := s.readRune()
-		if ch == EOFCHAR {
+		if ch == eofChar {
 			break
 		} else if escape {
 			buf.WriteRune(ch)

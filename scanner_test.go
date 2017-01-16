@@ -83,14 +83,14 @@ func TestScannerScan(t *testing.T) {
 func TestScannerScanRepeated(t *testing.T) {
 	program := "(hello !=\ngoodbye)\n"
 	tokens := []mini.Token{
-		{mini.ROUNDOPEN, "(", pos(0, 0), pos(0, 1)},
-		{mini.IDENT, "hello", pos(0, 1), pos(0, 6)},
-		{mini.WS, " ", pos(0, 6), pos(0, 7)},
-		{mini.NOTEQUAL, "!=", pos(0, 7), pos(0, 9)},
-		{mini.WS, "\n", pos(0, 9), pos(1, 0)},
-		{mini.IDENT, "goodbye", pos(1, 0), pos(1, 7)},
-		{mini.ROUNDCLOSE, ")", pos(1, 7), pos(1, 8)},
-		{mini.WS, "\n", pos(1, 8), pos(2, 0)},
+		{Type: mini.ROUNDOPEN, Value: "(", Start: pos(0, 0), End: pos(0, 1)},
+		{Type: mini.IDENT, Value: "hello", Start: pos(0, 1), End: pos(0, 6)},
+		{Type: mini.WS, Value: " ", Start: pos(0, 6), End: pos(0, 7)},
+		{Type: mini.NOTEQUAL, Value: "!=", Start: pos(0, 7), End: pos(0, 9)},
+		{Type: mini.WS, Value: "\n", Start: pos(0, 9), End: pos(1, 0)},
+		{Type: mini.IDENT, Value: "goodbye", Start: pos(1, 0), End: pos(1, 7)},
+		{Type: mini.ROUNDCLOSE, Value: ")", Start: pos(1, 7), End: pos(1, 8)},
+		{Type: mini.WS, Value: "\n", Start: pos(1, 8), End: pos(2, 0)},
 	}
 	s := mini.NewScanner(strings.NewReader(program))
 	for i, tok := range tokens {
