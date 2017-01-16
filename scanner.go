@@ -20,7 +20,7 @@ type Token struct {
 	Value string
 	Start Position
 	End   Position
-
+}
 
 const (
 	// Special tokens
