@@ -89,7 +89,115 @@ func (e *CallExpr) Eval(vm *Vm) (Object, error) {
 type Symbol string
 
 func (e Symbol) Eval(vm *Vm) (Object, error) {
-	return vm.Lookup(e), nil
+	obj := vm.Lookup(e)
+	if obj == nil {
+		return NIL, nil
+	}
+	return obj, nil
+}
+
+type NotExpr struct {
+	Expr Expression
+}
+
+func (e NotExpr) Eval(vm *Vm) (Object, error) {
+	if e.Expr == nil {
+		return NIL, nil
+	}
+	obj, err := e.Expr.Eval(vm)
+	if err != nil {
+		return nil, err
+	}
+	return Bool(!obj.Truthy()), nil
+}
+
+// FIXME rename LHS => Lhs
+// FIXME rename RHS => Rhs
+type AndExpr struct {
+	LHS Expression
+	RHS Expression
+}
+
+func (e AndExpr) Eval(vm *Vm) (Object, error) {
+	// preconditions
+	if e.LHS == nil || e.RHS == nil {
+		return NIL, nil
+	}
+	obj, err := e.LHS.Eval(vm)
+	if err != nil {
+		return nil, err
+	}
+	if !obj.Truthy() {
+		// short circuit if possible
+		return obj, nil
+	}
+	obj, err = e.RHS.Eval(vm)
+	if err != nil {
+		return nil, err
+	}
+	if !obj.Truthy() {
+		return FALSE, nil
+	}
+	return obj, nil
+}
+
+// FIXME rename LHS => Lhs
+// FIXME rename RHS => Rhs
+type OrExpr struct {
+	LHS Expression
+	RHS Expression
+}
+
+func (e OrExpr) Eval(vm *Vm) (Object, error) {
+	// preconditions
+	if e.LHS == nil || e.RHS == nil {
+		return NIL, nil
+	}
+	lhs, err := e.LHS.Eval(vm)
+	if err != nil {
+		return nil, err
+	}
+	if lhs.Truthy() {
+		// short circuit if possible
+		return lhs, nil
+	}
+	rhs, err := e.RHS.Eval(vm)
+	if err != nil {
+		return nil, err
+	}
+	if rhs.Truthy() {
+		return rhs, nil
+	}
+	return FALSE, nil
+}
+
+type OpExpr struct {
+	Base Expression
+	Args []Expression
+	Op   Op
+}
+
+func (e OpExpr) Eval(vm *Vm) (Object, error) {
+	lhs, err := e.Base.Eval(vm)
+	if err != nil {
+		return nil, err
+	}
+	var args Args
+	for _, expr := range e.Args {
+		obj, err := expr.Eval(vm)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, obj) // FIXME implement args.Append or args.Push?
+	}
+	ret, err := lhs.Send(e.Op, args)
+	if err != nil {
+		return nil, err
+	}
+	if ret == nil {
+		return nil, NewErrInvalidOp(e.Op, lhs)
+	}
+	return ret, nil
 }
 
 func evalBranch(cb ConditionalBlock, vm *Vm) (bool, Object, error) {

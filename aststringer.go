@@ -36,3 +36,23 @@ func (e CallExpr) String() string {
 func (e Symbol) String() string {
 	return fmt.Sprint("@", string(e))
 }
+
+func (e NotExpr) String() string {
+	return fmt.Sprint("Not[", e.Expr, "]")
+}
+
+func (e AndExpr) String() string {
+	return fmt.Sprint("Not[", e.LHS, " ", e.RHS, "]")
+}
+
+func (e OrExpr) String() string {
+	return fmt.Sprint("Not[", e.LHS, " ", e.RHS, "]")
+}
+
+func (e OpExpr) String() string {
+	children := []string{fmt.Sprint(e.Base)}
+	for _, arg := range e.Args {
+		children = append(children, fmt.Sprint(arg))
+	}
+	return fmt.Sprint("Op{", e.Op, "}[", strings.Join(children, " "), "]")
+}
