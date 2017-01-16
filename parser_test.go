@@ -17,17 +17,17 @@ func TestParserParse(t *testing.T) {
 		{
 			"print()",
 			false,
-			"Tree[@print([])]",
+			"Tree[@print[]]",
 		},
 		{
 			"print()print()",
 			false,
-			"Tree[@print([]) @print([])]",
+			"Tree[@print[] @print[]]",
 		},
 		{
 			"print()",
 			false,
-			"Tree[@print([])]",
+			"Tree[@print[]]",
 		},
 		{
 			"(,,)",
@@ -37,27 +37,27 @@ func TestParserParse(t *testing.T) {
 		{
 			"print(foo)",
 			false,
-			"Tree[@print([@foo])]",
+			"Tree[@print[@foo]]",
 		},
 		{
 			"print(foo,)",
 			false,
-			"Tree[@print([@foo])]",
+			"Tree[@print[@foo]]",
 		},
 		{
 			"print(foo,bar)",
 			false,
-			"Tree[@print([@foo @bar])]",
+			"Tree[@print[@foo @bar]]",
 		},
 		{
 			"print(foo,bar,)",
 			false,
-			"Tree[@print([@foo @bar])]",
+			"Tree[@print[@foo @bar]]",
 		},
 		{
 			"print(\"hello\", 123, \"world\", false)",
 			false,
-			"Tree[@print([#(string)hello #(int)123 #(string)world #(bool)false])]",
+			"Tree[@print[hello 123 world false]]",
 		},
 		{
 			"foo",
@@ -72,7 +72,7 @@ func TestParserParse(t *testing.T) {
 		{
 			"foo = bar",
 			false,
-			"Tree[@foo=(@bar)]",
+			"Tree[@foo=@bar]",
 		},
 	}
 	for _, test := range tests {

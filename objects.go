@@ -3,7 +3,9 @@ package mini
 import "math"
 
 const (
-	NIL = Nil(false)
+	NIL   = Nil(false)
+	TRUE  = Bool(true)
+	FALSE = Bool(false)
 )
 
 type Method string

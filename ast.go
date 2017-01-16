@@ -1,15 +1,14 @@
 package mini
 
 type Expression interface {
-	// FIXME maybe replace interface{} with an Object type
-	Eval(*Vm) (Object, error) // walk the children
+	Eval(*Vm) (Object, error)
 }
 
-type TreeExpr struct {
+type Tree struct {
 	Children []Expression
 }
 
-func (e *TreeExpr) Eval(vm *Vm) (obj Object, err error) {
+func (e *Tree) Eval(vm *Vm) (obj Object, err error) {
 	for _, expr := range e.Children {
 		obj, err = expr.Eval(vm)
 		if err != nil {
@@ -19,39 +18,27 @@ func (e *TreeExpr) Eval(vm *Vm) (obj Object, err error) {
 	return
 }
 
+type ConditionalBlock struct {
+	Condition Expression
+	Block     Expression
+}
+
 type IfExpr struct {
-	IfCond    Expression
-	IfBlock   Expression
-	ElseCond  Expression
-	ElseBlock Expression
+	If   ConditionalBlock
+	Else ConditionalBlock
 }
 
 func (e *IfExpr) Eval(vm *Vm) (Object, error) {
-	obj, err := e.IfCond.Eval(vm)
-	if err != nil {
-		return nil, err
+	didEval, obj, err := evalBranch(e.If, vm)
+	if !didEval || err != nil {
+		return obj, err
 	}
-	if obj != nil && obj.Truthy() {
-		if e.IfBlock != nil {
-			return e.IfBlock.Eval(vm)
-		}
-	} else if e.ElseCond != nil {
-		obj, err := e.ElseCond.Eval(vm)
-		if err != nil {
-			return nil, err
-		}
-		if obj != nil && obj.Truthy() {
-			if e.ElseBlock != nil {
-				return e.ElseBlock.Eval(vm)
-			}
-		}
-	}
-	return nil, nil
+	_, obj, err = evalBranch(e.Else, vm)
+	return obj, err
 }
 
 type ForExpr struct {
-	Condition Expression
-	Block     Expression
+	For ConditionalBlock
 }
 
 func (e *ForExpr) Eval(vm *Vm) (Object, error) {
@@ -60,16 +47,9 @@ func (e *ForExpr) Eval(vm *Vm) (Object, error) {
 		err error
 	)
 	for {
-		var cond Object
-		cond, err = e.Condition.Eval(vm)
-		if err != nil {
-			break
-		}
-		if cond == nil || !cond.Truthy() {
-			break
-		}
-		obj, err = e.Block.Eval(vm)
-		if err != nil {
+		var didEval bool
+		didEval, obj, err = evalBranch(e.For, vm)
+		if err != nil || !didEval {
 			break
 		}
 	}
@@ -77,21 +57,21 @@ func (e *ForExpr) Eval(vm *Vm) (Object, error) {
 }
 
 type AssignExpr struct {
-	LHSSymbol string
-	RHS       Expression
+	Name Symbol
+	Expr Expression
 }
 
 func (e *AssignExpr) Eval(vm *Vm) (obj Object, err error) {
-	obj, err = e.RHS.Eval(vm)
+	obj, err = e.Expr.Eval(vm)
 	if err == nil {
-		vm.Assign(e.LHSSymbol, obj)
+		vm.Assign(e.Name, obj)
 	}
 	return
 }
 
 type CallExpr struct {
-	Symbol string
-	Args   []Expression
+	Name Symbol
+	Args []Expression
 }
 
 func (e *CallExpr) Eval(vm *Vm) (Object, error) {
@@ -103,21 +83,26 @@ func (e *CallExpr) Eval(vm *Vm) (Object, error) {
 			return nil, err
 		}
 	}
-	return vm.Call(e.Symbol, args)
+	return vm.Call(e.Name, args)
 }
 
-type ConstExpr struct {
-	Value Object
+type Symbol string
+
+func (e Symbol) Eval(vm *Vm) (Object, error) {
+	return vm.Lookup(e), nil
 }
 
-func (e *ConstExpr) Eval(vm *Vm) (Object, error) {
-	return e.Value, nil
-}
-
-type LookupExpr struct {
-	Symbol string
-}
-
-func (e *LookupExpr) Eval(vm *Vm) (Object, error) {
-	return vm.Lookup(e.Symbol), nil
+func evalBranch(cb ConditionalBlock, vm *Vm) (bool, Object, error) {
+	if cb.Condition == nil {
+		return false, NIL, nil
+	}
+	obj, err := cb.Condition.Eval(vm)
+	if err != nil || !obj.Truthy() {
+		return false, NIL, err
+	}
+	if cb.Block == nil {
+		return false, NIL, nil
+	}
+	obj, err = cb.Block.Eval(vm)
+	return true, obj, err
 }

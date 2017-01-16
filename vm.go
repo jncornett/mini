@@ -7,8 +7,10 @@ import (
 	"strings"
 )
 
+type SymbolTable map[Symbol]Object
+
 type Vm struct {
-	Symbols map[string]Object
+	Symbols SymbolTable
 	Result  Object
 	Debug   bool
 }
@@ -38,15 +40,15 @@ func (vm *Vm) EvalString(s string) error {
 	return vm.Eval(strings.NewReader(s))
 }
 
-func (vm *Vm) Assign(sym string, obj Object) {
+func (vm *Vm) Assign(sym Symbol, obj Object) {
 	vm.Symbols[sym] = obj
 }
 
-func (vm *Vm) Lookup(sym string) Object {
+func (vm *Vm) Lookup(sym Symbol) Object {
 	return vm.Symbols[sym]
 }
 
-func (vm *Vm) Call(sym string, args Args) (Object, error) {
+func (vm *Vm) Call(sym Symbol, args Args) (Object, error) {
 	fn, ok := vm.Lookup(sym).(Callable)
 	if !ok {
 		return nil, fmt.Errorf("TypeError: %v is not a function", sym)
@@ -54,8 +56,8 @@ func (vm *Vm) Call(sym string, args Args) (Object, error) {
 	return fn.Call(args)
 }
 
-func getDefaultSymbols() map[string]Object {
-	symbols := make(map[string]Object)
+func getDefaultSymbols() SymbolTable {
+	symbols := make(SymbolTable)
 	for _, entry := range GetStdlib() {
 		symbols[entry.Name] = entry.Func
 	}

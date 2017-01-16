@@ -11,7 +11,7 @@ var (
 )
 
 type StdlibEntry struct {
-	Name string
+	Name Symbol
 	Func Function
 }
 
