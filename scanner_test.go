@@ -69,7 +69,7 @@ func TestScannerScan(t *testing.T) {
 			s := mini.NewScanner(strings.NewReader(test.Program))
 			tok := s.Scan()
 			if test.Type != tok.Type {
-				t.Error("expected type %v, got %v", test.Type, tok.Type)
+				t.Errorf("expected type %v, got %v", test.Type, tok.Type)
 			}
 			if test.Value != tok.Value {
 				// t.Logf("expected: %v", []byte(test.Value))
