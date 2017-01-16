@@ -12,7 +12,39 @@ func (o Number) Truthy() bool { return true }
 func (o Number) IsNil() bool { return false }
 
 // Send helps Number implement the Object interface
-func (o Number) Send(Op, Args) (Object, error) { return nil, nil }
+func (o Number) Send(op Op, args Args) (Object, error) {
+	switch op {
+	case OpNeg:
+		return -o, nil
+	case OpAdd, OpSub, OpMul, OpDiv, OpLt, OpLe, OpGt, OpGe, OpEq, OpNe:
+		rhs, ok := args.Arg(0).(Number)
+		if !ok {
+			return nil, newErrTypeBadRhs(op, o, rhs, numberType)
+		}
+		switch op {
+		case OpAdd:
+			return o + rhs, nil
+		case OpSub:
+			return o - rhs, nil
+		case OpMul:
+			return o * rhs, nil
+		case OpDiv:
+			if rhs == 0 {
+				return nil, ErrZeroDivision
+			}
+			return o / rhs, nil
+		case OpLt:
+			return Bool(o < rhs), nil
+		case OpLe:
+			return Bool(o <= rhs), nil
+		case OpGt:
+			return Bool(o > rhs), nil
+		case OpGe:
+			return Bool(o >= rhs), nil
+		}
+	}
+	return nil, NewErrInvalidOp(op, o)
+}
 
 // Eval helps Number implement the Expression interface
 func (o Number) Eval(*Vm) (Object, error) { return o, nil }

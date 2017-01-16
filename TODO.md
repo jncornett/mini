@@ -7,3 +7,4 @@
 - flesh out unit tests
 - add API for embedding
 - change implementation of unary/binary ops
+- cleanup mixing of NIL and nil for return values

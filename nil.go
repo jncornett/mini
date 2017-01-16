@@ -17,3 +17,5 @@ func (o Nil) Send(Op, Args) (Object, error) { return nil, nil }
 
 // Eval helps Nil implement the Expression interface.
 func (o Nil) Eval(*Vm) (Object, error) { return o, nil }
+
+func (o Nil) String() string { return "nil" }

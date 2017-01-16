@@ -73,7 +73,9 @@ func (p *Parser) parseExpression(expect bool) (Expression, error) {
 		} else {
 			expr = Symbol(tok.Value)
 		}
-	case NOT, SUBTRACT:
+	case NOT:
+		expr, err = p.parseNotExpression()
+	case SUBTRACT:
 		expr, err = p.parseUnaryExpression(tok.Type)
 	case ROUNDOPEN:
 		expr, err = p.parseParenthesizedExpression()
@@ -89,7 +91,11 @@ func (p *Parser) parseExpression(expect bool) (Expression, error) {
 	// Now we need to lookahead one token to check if this expression is part of a BinExpr
 	next := p.scanIgnoreWhitespace()
 	switch next.Type {
-	case ADD, SUBTRACT, MULTIPLY, DIVIDE, LESS, LESSEQUAL, GREATER, GREATEREQUAL, EQUAL, NOTEQUAL, AND, OR:
+	case AND:
+		expr, err = p.parseAndExpression(expr)
+	case OR:
+		expr, err = p.parseOrExpression(expr)
+	case ADD, SUBTRACT, MULTIPLY, DIVIDE, LESS, LESSEQUAL, GREATER, GREATEREQUAL, EQUAL, NOTEQUAL:
 		expr, err = p.parseBinaryExpression(expr, next.Type)
 	default:
 		p.unscanToken()
@@ -98,6 +104,30 @@ func (p *Parser) parseExpression(expect bool) (Expression, error) {
 		err = fmt.Errorf("Expected expression")
 	}
 	return expr, err
+}
+
+func (p *Parser) parseAndExpression(lhs Expression) (Expression, error) {
+	rhs, err := p.parseExpression(true)
+	if err != nil {
+		return nil, err
+	}
+	return &AndExpr{LHS: lhs, RHS: rhs}, nil
+}
+
+func (p *Parser) parseOrExpression(lhs Expression) (Expression, error) {
+	rhs, err := p.parseExpression(true)
+	if err != nil {
+		return nil, err
+	}
+	return &OrExpr{LHS: lhs, RHS: rhs}, nil
+}
+
+func (p *Parser) parseNotExpression() (Expression, error) {
+	expr, err := p.parseExpression(true)
+	if err != nil {
+		return nil, err
+	}
+	return &NotExpr{Expr: expr}, nil
 }
 
 func (p *Parser) parseFunctionCall(sym string) (Expression, error) {
@@ -121,11 +151,7 @@ func (p *Parser) parseUnaryExpression(tt TokenType) (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	sym, err := getUnaryFunctionName(tt)
-	if err != nil {
-		return nil, err
-	}
-	return &CallExpr{Name: Symbol(sym), Args: []Expression{expr}}, nil
+	return &OpExpr{Base: expr, Op: getUnaryOp(tt)}, nil
 }
 
 func (p *Parser) parseBinaryExpression(lhs Expression, tt TokenType) (Expression, error) {
@@ -133,11 +159,7 @@ func (p *Parser) parseBinaryExpression(lhs Expression, tt TokenType) (Expression
 	if err != nil {
 		return nil, err
 	}
-	sym, err := getBinaryFunctionName(tt)
-	if err != nil {
-		return nil, err
-	}
-	return &CallExpr{Name: Symbol(sym), Args: []Expression{lhs, rhs}}, nil
+	return &OpExpr{Base: lhs, Args: []Expression{rhs}, Op: getBinaryOp(tt)}, nil
 }
 
 func (p *Parser) parseParenthesizedExpression() (Expression, error) {
@@ -230,44 +252,38 @@ func (p *Parser) parseExpressionList() ([]Expression, error) {
 	return expressions, nil
 }
 
-func getUnaryFunctionName(tt TokenType) (string, error) {
+func getUnaryOp(tt TokenType) Op {
 	switch tt {
-	case NOT:
-		return "__not", nil
 	case SUBTRACT:
-		return "__neg", nil
+		return OpNeg
 	}
-	return "", fmt.Errorf("No unary function for token: %v", tt)
+	return OpNoop
 }
 
-func getBinaryFunctionName(tt TokenType) (string, error) {
+func getBinaryOp(tt TokenType) Op {
 	switch tt {
 	case ADD:
-		return "__add", nil
+		return OpAdd
 	case SUBTRACT:
-		return "__sub", nil
+		return OpSub
 	case MULTIPLY:
-		return "__mul", nil
+		return OpMul
 	case DIVIDE:
-		return "__div", nil
+		return OpDiv
 	case LESS:
-		return "__lt", nil
+		return OpLt
 	case LESSEQUAL:
-		return "__le", nil
+		return OpLe
 	case GREATER:
-		return "__gt", nil
+		return OpGt
 	case GREATEREQUAL:
-		return "__ge", nil
+		return OpGe
 	case EQUAL:
-		return "__eq", nil
+		return OpEq
 	case NOTEQUAL:
-		return "__ne", nil
-	case AND:
-		return "__and", nil
-	case OR:
-		return "__or", nil
+		return OpNe
 	}
-	return "", fmt.Errorf("No binary function for token: %v", tt)
+	return OpNoop
 }
 
 // FIXME should catch parse errors at lexing

@@ -6,10 +6,6 @@ import (
 	"reflect"
 )
 
-var (
-	numberType = reflect.TypeOf(Number(0))
-)
-
 type StdlibEntry struct {
 	Name Symbol
 	Func Function
