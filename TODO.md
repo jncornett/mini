@@ -7,3 +7,4 @@
 - add CI hooks
 - flesh out unit tests
 - add API for embedding
+- change implementation of unary/binary ops
