@@ -16,9 +16,13 @@ type Vm struct {
 }
 
 func NewVm() *Vm {
-	vm := &Vm{}
+	vm := NewMinimalVm()
 	vm.LoadLib(StdLib)
 	return vm
+}
+
+func NewMinimalVm() *Vm {
+	return &Vm{Symbols: make(SymbolTable)}
 }
 
 func (vm *Vm) Eval(r io.Reader) error {
