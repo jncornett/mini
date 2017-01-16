@@ -6,9 +6,13 @@ import (
 	"reflect"
 )
 
+var (
+	numberType = reflect.TypeOf(Number(0))
+)
+
 type StdlibEntry struct {
-	Name string
-	Func FunctionObject
+	Name Symbol
+	Func Function
 }
 
 // FIXME this isn't the best way to organize functionality
@@ -17,58 +21,62 @@ func GetStdlib() []StdlibEntry {
 		// builtins
 		{
 			"__not",
-			func(args []Object) (Object, error) {
-				return BoolObject(!GetBoolValue(getArg(args, 0))), nil
+			func(args Args) (Object, error) {
+				return NewBoolFromBool(!args.Arg(0).Truthy()), nil
 			},
 		},
 		{
 			"__neg",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
+				num, ok := args.Arg(0).(Number)
 				// currently only defined for numbers
+				if !ok {
+					return nil, typeError(numberType, num)
+				}
 				switch v := getArg(args, 0).(type) {
-				case NumberObject:
-					return NumberObject(-int(v)), nil
+				case Number:
+					return Number(-int(v)), nil
 				default:
-					return nil, typeError("number", v)
+					return nil, typeError(numberType, num)
 				}
 			},
 		},
 		{
 			"__add",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
 					return nil, err
 				}
-				return NumberObject(lhs + rhs), nil
+				return Number(lhs + rhs), nil
 			},
 		},
 		{
 			"__sub",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
 					return nil, err
 				}
-				return NumberObject(lhs - rhs), nil
+				return Number(lhs - rhs), nil
 			},
 		},
 		{
 			"__mul",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
 					return nil, err
 				}
-				return NumberObject(lhs * rhs), nil
+				return Number(lhs * rhs), nil
 			},
 		},
 		{
 			"__div",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -77,97 +85,99 @@ func GetStdlib() []StdlibEntry {
 				if rhs == 0 {
 					return nil, errors.New("ZeroDivisionError")
 				}
-				return NumberObject(lhs / rhs), nil
+				return Number(lhs / rhs), nil
 			},
 		},
 		{
 			"__lt",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
 					return nil, err
 				}
-				return BoolObject(lhs < rhs), nil
+				return Bool(lhs < rhs), nil
 			},
 		},
 		{
 			"__le",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
 					return nil, err
 				}
-				return BoolObject(lhs <= rhs), nil
+				return Bool(lhs <= rhs), nil
 			},
 		},
 		{
 			"__gt",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
 					return nil, err
 				}
-				return BoolObject(lhs > rhs), nil
+				return Bool(lhs > rhs), nil
 			},
 		},
 		{
 			"__ge",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
 					return nil, err
 				}
-				return BoolObject(lhs >= rhs), nil
+				return Bool(lhs >= rhs), nil
 			},
 		},
 		{
 			"__eq",
-			func(args []Object) (Object, error) {
-				return BoolObject(reflect.DeepEqual(getArg(args, 0), getArg(args, 1))), nil
+			func(args Args) (Object, error) {
+				return Bool(reflect.DeepEqual(getArg(args, 0), getArg(args, 1))), nil
 			},
 		},
 		{
 			"__ne",
-			func(args []Object) (Object, error) {
-				return BoolObject(!reflect.DeepEqual(getArg(args, 0), getArg(args, 1))), nil
+			func(args Args) (Object, error) {
+				return Bool(!reflect.DeepEqual(getArg(args, 0), getArg(args, 1))), nil
 			},
 		},
 		{
 			"__and",
-			func(args []Object) (Object, error) {
-				lhs := GetBoolValue(getArg(args, 0))
-				if !lhs {
-					return BoolObject(false), nil // Shortcircuit
+			func(args Args) (Object, error) {
+				lhs := args.Arg(0)
+				if !lhs.Truthy() {
+					// short circuit if we can
+					return Bool(false), nil
 				}
-				rhs := GetBoolValue(getArg(args, 1))
-				if !rhs {
-					return BoolObject(false), nil
+				rhs := args.Arg(1)
+				if !rhs.Truthy() {
+					return Bool(false), nil
 				}
-				return getArg(args, 1), nil
+				return rhs, nil
 			},
 		},
 		{
 			"__or",
-			func(args []Object) (Object, error) {
-				lhs := GetBoolValue(getArg(args, 0))
-				if lhs {
-					return getArg(args, 0), nil // Shortcircuit
+			func(args Args) (Object, error) {
+				lhs := args.Arg(0)
+				if lhs.Truthy() {
+					// short circuit if possible
+					return lhs, nil
 				}
-				rhs := GetBoolValue(getArg(args, 1))
-				if rhs {
-					return getArg(args, 1), nil
+				rhs := args.Arg(1)
+				if rhs.Truthy() {
+					return rhs, nil
 				}
-				return BoolObject(false), nil
+				return Bool(false), nil
 			},
 		},
 		// stdlib
 		{
 			"print",
-			func(args []Object) (Object, error) {
+			func(args Args) (Object, error) {
 				_, err := fmt.Println(objectsToEmpties(args)...)
 				return nil, err
 			},
@@ -175,42 +185,38 @@ func GetStdlib() []StdlibEntry {
 	}
 }
 
-func objectsToEmpties(args []Object) []interface{} {
+func objectsToEmpties(args Args) []interface{} {
 	var out []interface{}
 	for _, arg := range args {
-		out = append(out, arg.Value())
+		out = append(out, arg)
 	}
 	return out
 }
 
-func getArg(args []Object, n int) Object {
+func getArg(args Args, n int) Object {
 	if n < 0 || n >= len(args) {
 		return nil
 	}
 	return args[n]
 }
 
-func getTwoIntArgs(args []Object) (int, int, error) {
+func getTwoIntArgs(args Args) (int, int, error) {
 	var lhs, rhs int
 	switch v := getArg(args, 0).(type) {
-	case NumberObject:
+	case Number:
 		lhs = int(v)
 	default:
-		return 0, 0, typeError("number", v)
+		return 0, 0, typeError(numberType, v)
 	}
 	switch v := getArg(args, 1).(type) {
-	case NumberObject:
+	case Number:
 		rhs = int(v)
 	default:
-		return 0, 0, typeError("number", v)
+		return 0, 0, typeError(numberType, v)
 	}
 	return lhs, rhs, nil
 }
 
-func getTwoBoolValues(args []Object) (bool, bool) {
-	return GetBoolValue(getArg(args, 0)), GetBoolValue(getArg(args, 1))
-}
-
-func typeError(expected string, actual interface{}) error {
-	return fmt.Errorf("TypeError: expected %v, got %T", expected, actual)
+func typeError(want reflect.Type, have interface{}) error {
+	return fmt.Errorf("Wrong type, want %v, have (%T)(%v)", want, have, have)
 }

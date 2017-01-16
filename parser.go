@@ -17,7 +17,11 @@ func NewParser(r io.Reader) *Parser {
 	return &Parser{s: NewScanner(r)}
 }
 
-func (p *Parser) scan() Token {
+func (p *Parser) Parse() (Expression, error) {
+	return p.parseExpressionBlock(false)
+}
+
+func (p *Parser) scanToken() Token {
 	if p.haveLast {
 		p.haveLast = false
 		return p.last
@@ -27,14 +31,14 @@ func (p *Parser) scan() Token {
 	return p.last
 }
 
-func (p *Parser) unscan() {
+func (p *Parser) unscanToken() {
 	p.haveLast = true
 }
 
 func (p *Parser) scanIgnoreWhitespace() Token {
-	tok := p.scan()
+	tok := p.scanToken()
 	if tok.Type == WS {
-		return p.scan()
+		return p.scanToken()
 	}
 	return tok
 }
@@ -44,12 +48,8 @@ func (p *Parser) accept(tt TokenType) bool {
 	if tok.Type == tt {
 		return true
 	}
-	p.unscan()
+	p.unscanToken()
 	return false
-}
-
-func (p *Parser) Parse() (Expression, error) {
-	return p.parseExpressionBlock(false)
 }
 
 func (p *Parser) parseExpression(expect bool) (Expression, error) {
@@ -60,29 +60,18 @@ func (p *Parser) parseExpression(expect bool) (Expression, error) {
 	)
 	switch tok.Type {
 	case STRING:
-		expr = &ConstExpr{Value: StringObject(tok.Value)}
+		expr = NewStringFromString(tok.Value)
 	case NUMBER:
-		// FIXME need to transparently support floating point
-		v, errConv := strconv.Atoi(tok.Value)
-		if errConv != nil {
-			err = fmt.Errorf("Expected a number at %v: %v", tok.Start, errConv)
-		} else {
-			expr = &ConstExpr{Value: NumberObject(v)}
-		}
+		expr, err = convertTokenToNumber(tok)
 	case BOOL:
-		v, errConv := strconv.ParseBool(tok.Value)
-		if errConv != nil {
-			err = fmt.Errorf("Expected a boolean at %v: %v", tok.Start, errConv)
-		} else {
-			expr = &ConstExpr{Value: BoolObject(v)}
-		}
+		expr, err = convertTokenToBool(tok)
 	case IDENT:
 		if p.accept(ROUNDOPEN) {
 			expr, err = p.parseFunctionCall(tok.Value)
 		} else if p.accept(ASSIGN) {
 			expr, err = p.parseAssignment(tok.Value)
 		} else {
-			expr = &LookupExpr{Symbol: tok.Value}
+			expr = Symbol(tok.Value)
 		}
 	case NOT, SUBTRACT:
 		expr, err = p.parseUnaryExpression(tok.Type)
@@ -103,7 +92,7 @@ func (p *Parser) parseExpression(expect bool) (Expression, error) {
 	case ADD, SUBTRACT, MULTIPLY, DIVIDE, LESS, LESSEQUAL, GREATER, GREATEREQUAL, EQUAL, NOTEQUAL, AND, OR:
 		expr, err = p.parseBinaryExpression(expr, next.Type)
 	default:
-		p.unscan()
+		p.unscanToken()
 	}
 	if expr == nil && expect {
 		err = fmt.Errorf("Expected expression")
@@ -116,7 +105,7 @@ func (p *Parser) parseFunctionCall(sym string) (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CallExpr{Symbol: sym, Args: args}, nil
+	return &CallExpr{Name: Symbol(sym), Args: args}, nil
 }
 
 func (p *Parser) parseAssignment(sym string) (Expression, error) {
@@ -124,7 +113,7 @@ func (p *Parser) parseAssignment(sym string) (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &AssignExpr{LHSSymbol: sym, RHS: rhs}, nil
+	return &AssignExpr{Name: Symbol(sym), Expr: rhs}, nil
 }
 
 func (p *Parser) parseUnaryExpression(tt TokenType) (Expression, error) {
@@ -136,7 +125,7 @@ func (p *Parser) parseUnaryExpression(tt TokenType) (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CallExpr{Symbol: sym, Args: []Expression{expr}}, nil
+	return &CallExpr{Name: Symbol(sym), Args: []Expression{expr}}, nil
 }
 
 func (p *Parser) parseBinaryExpression(lhs Expression, tt TokenType) (Expression, error) {
@@ -148,7 +137,7 @@ func (p *Parser) parseBinaryExpression(lhs Expression, tt TokenType) (Expression
 	if err != nil {
 		return nil, err
 	}
-	return &CallExpr{Symbol: sym, Args: []Expression{lhs, rhs}}, nil
+	return &CallExpr{Name: Symbol(sym), Args: []Expression{lhs, rhs}}, nil
 }
 
 func (p *Parser) parseParenthesizedExpression() (Expression, error) {
@@ -156,49 +145,55 @@ func (p *Parser) parseParenthesizedExpression() (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TreeExpr{Children: expressions}, nil
+	return &Tree{Children: expressions}, nil
 }
 
 func (p *Parser) parseForExpression() (Expression, error) {
-	forCond, forBlock, err := p.parseConditional()
+	cb, err := p.parseConditional()
 	if err != nil {
 		return nil, err
 	}
-	return &ForExpr{Condition: forCond, Block: forBlock}, nil
+	return &ForExpr{For: cb}, nil
 }
 
 func (p *Parser) parseIfExpression() (Expression, error) {
-	ifCond, ifBlock, err := p.parseConditional()
+	ifExpr := IfExpr{}
+	cb, err := p.parseConditional()
 	if err != nil {
 		return nil, err
 	}
-	expr := IfExpr{IfCond: ifCond, IfBlock: ifBlock}
+	ifExpr.If = cb
 	if p.accept(ELSE) {
-		elseCond, elseBlock, err := p.parseConditional()
+		cb, err := p.parseConditional()
 		if err != nil {
 			return nil, err
 		}
-		expr.ElseCond = elseCond
-		expr.ElseBlock = elseBlock
+		ifExpr.Else = cb
 	}
-	return &expr, nil
+	return &ifExpr, nil
 }
 
-func (p *Parser) parseConditional() (cond Expression, block Expression, err error) {
+func (p *Parser) parseConditional() (ConditionalBlock, error) {
+	cb := ConditionalBlock{}
 	if p.accept(CURLYOPEN) {
 		// skip the condition block
-		cond = &ConstExpr{Value: BoolObject(true)}
+		cb.Condition = TRUE
 	} else {
-		cond, err = p.parseExpression(true)
+		cond, err := p.parseExpression(true)
 		if err != nil {
-			return
+			return cb, err
 		}
-		if !p.accept(CURLYOPEN) {
-			err = errors.New("Expected block")
-		}
+		cb.Condition = cond
 	}
-	block, err = p.parseExpressionBlock(true)
-	return
+	if !p.accept(CURLYOPEN) {
+		return cb, errors.New("Expected block") // FIXME position info error
+	}
+	block, err := p.parseExpressionBlock(true)
+	if err != nil {
+		return cb, err
+	}
+	cb.Block = block
+	return cb, nil
 }
 
 func (p *Parser) parseExpressionBlock(enclosed bool) (Expression, error) {
@@ -216,7 +211,7 @@ func (p *Parser) parseExpressionBlock(enclosed bool) (Expression, error) {
 		}
 		expressions = append(expressions, expr)
 	}
-	return &TreeExpr{Children: expressions}, nil
+	return &Tree{Children: expressions}, nil
 }
 
 func (p *Parser) parseExpressionList() ([]Expression, error) {
@@ -273,4 +268,21 @@ func getBinaryFunctionName(tt TokenType) (string, error) {
 		return "__or", nil
 	}
 	return "", fmt.Errorf("No binary function for token: %v", tt)
+}
+
+// FIXME should catch parse errors at lexing
+func convertTokenToNumber(t Token) (Number, error) {
+	val, err := strconv.ParseFloat(t.Value, 64)
+	if err != nil {
+		return 0, fmt.Errorf("Expected a number at %v: %v", t.Start, err)
+	}
+	return NewNumberFromFloat(val), nil
+}
+
+func convertTokenToBool(t Token) (Bool, error) {
+	val, err := strconv.ParseBool(t.Value)
+	if err != nil {
+		return false, fmt.Errorf("Expected a bool at %v: %v", t.Start, err)
+	}
+	return NewBoolFromBool(val), nil
 }
