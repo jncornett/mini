@@ -60,21 +60,21 @@ func (p *Parser) parseExpression(expect bool) (Expression, error) {
 	)
 	switch tok.Type {
 	case STRING:
-		expr = &ConstExpr{Value: StringObject(tok.Value)}
+		expr = &ConstExpr{Value: String(tok.Value)}
 	case NUMBER:
 		// FIXME need to transparently support floating point
 		v, errConv := strconv.Atoi(tok.Value)
 		if errConv != nil {
 			err = fmt.Errorf("Expected a number at %v: %v", tok.Start, errConv)
 		} else {
-			expr = &ConstExpr{Value: NumberObject(v)}
+			expr = &ConstExpr{Value: Number(v)}
 		}
 	case BOOL:
 		v, errConv := strconv.ParseBool(tok.Value)
 		if errConv != nil {
 			err = fmt.Errorf("Expected a boolean at %v: %v", tok.Start, errConv)
 		} else {
-			expr = &ConstExpr{Value: BoolObject(v)}
+			expr = &ConstExpr{Value: Bool(v)}
 		}
 	case IDENT:
 		if p.accept(ROUNDOPEN) {
@@ -187,7 +187,7 @@ func (p *Parser) parseIfExpression() (Expression, error) {
 func (p *Parser) parseConditional() (cond Expression, block Expression, err error) {
 	if p.accept(CURLYOPEN) {
 		// skip the condition block
-		cond = &ConstExpr{Value: BoolObject(true)}
+		cond = &ConstExpr{Value: Bool(true)}
 	} else {
 		cond, err = p.parseExpression(true)
 		if err != nil {

@@ -2,73 +2,82 @@ package mini
 
 import "math"
 
+const (
+	NIL = Nil(false)
+)
+
 type Method string
 
 type Object interface {
 	Truthy() bool
-	Nil() bool // FIXME rename IsNil
-	Send(m Method, args ArgsObject) Object
+	IsNil() bool
+	Send(m Method, args Args) Object
 }
 
-type Nil struct{}
+type Nil bool
 
-func (o Nil) Truthy() bool                   { return false }
-func (o Nil) Nil() bool                      { return true }
-func (o Nil) Send(Method, ArgsObject) Object { return nil }
-func (o Nil) Eval(*Vm) (Object, error)       { return o, nil }
+func (o Nil) Truthy() bool             { return false }
+func (o Nil) IsNil() bool              { return true }
+func (o Nil) Send(Method, Args) Object { return nil }
+func (o Nil) Eval(*Vm) (Object, error) { return o, nil }
 
-type ArgsObject []Object
+func NewNil() Nil { return NIL }
 
-func (o ArgsObject) Truthy() bool                   { return !o.Empty() }
-func (o ArgsObject) Nil() bool                      { return false }
-func (o ArgsObject) Send(Method, ArgsObject) Object { return nil }
-func (o ArgsObject) Eval(*Vm) (Object, error)       { return o, nil }
-func (o ArgsObject) Empty() bool                    { return o.Len() == 0 }
-func (o ArgsObject) Len() int                       { return len(o) }
-func (o ArgsObject) Arg(n int) Object {
+type Args []Object
+
+func (o Args) Truthy() bool             { return !o.Empty() }
+func (o Args) IsNil() bool              { return false }
+func (o Args) Send(Method, Args) Object { return nil }
+func (o Args) Eval(*Vm) (Object, error) { return o, nil }
+func (o Args) Empty() bool              { return o.Len() == 0 }
+func (o Args) Len() int                 { return len(o) }
+func (o Args) Arg(n int) Object {
 	if n < 0 || o.Len() <= n {
-		return &Nil{} // FIXME want singleton?
+		return NIL
 	}
 	return o[n]
 }
 
-type FunctionObject func(ArgsObject) (Object, error)
+type Function func(Args) (Object, error)
 
-func (o FunctionObject) Truthy() bool                         { return o != nil }
-func (o FunctionObject) Nil() bool                            { return false }
-func (o FunctionObject) Send(Method, ArgsObject) Object       { return nil }
-func (o FunctionObject) Call(args ArgsObject) (Object, error) { return o(args) }
-func (o FunctionObject) Eval(*Vm) (Object, error)             { return o, nil }
+func (o Function) Truthy() bool                   { return o != nil }
+func (o Function) IsNil() bool                    { return false }
+func (o Function) Send(Method, Args) Object       { return nil }
+func (o Function) Call(args Args) (Object, error) { return o(args) }
+func (o Function) Eval(*Vm) (Object, error)       { return o, nil }
 
-type StringObject string
+type String string
 
-func (o StringObject) Truthy() bool                   { return true }
-func (o StringObject) Nil() bool                      { return false }
-func (o StringObject) Send(Method, ArgsObject) Object { return nil }
-func (o StringObject) Eval(*Vm) (Object, error)       { return o, nil }
+func (o String) Truthy() bool             { return true }
+func (o String) IsNil() bool              { return false }
+func (o String) Send(Method, Args) Object { return nil }
+func (o String) Eval(*Vm) (Object, error) { return o, nil }
 
-func StringObjectFromString(v string) StringObject { return StringObject(v) }
+func NewString() String                   { return String("") }
+func NewStringFromString(v string) String { return String(v) }
 
-type NumberObject float64
+type Number float64
 
-func (o NumberObject) Truthy() bool                   { return true }
-func (o NumberObject) Nil() bool                      { return false }
-func (o NumberObject) Send(Method, ArgsObject) Object { return nil }
-func (o NumberObject) Eval(*Vm) (Object, error)       { return o, nil }
-func (o NumberObject) ToInt() int                     { return int(o) }
-func (o NumberObject) ToFloat() float64               { return float64(o) }
-func (o NumberObject) IsFloat() bool {
+func (o Number) Truthy() bool             { return true }
+func (o Number) IsNil() bool              { return false }
+func (o Number) Send(Method, Args) Object { return nil }
+func (o Number) Eval(*Vm) (Object, error) { return o, nil }
+func (o Number) ToInt() int               { return int(o) }
+func (o Number) ToFloat() float64         { return float64(o) }
+func (o Number) IsFloat() bool {
 	return float64(o) == math.Floor(float64(o))
 }
 
-func NumberObjectFromFloat(v float64) NumberObject { return NumberObject(v) }
-func NumberObjectFromInt(v int) NumberObject       { return NumberObject(v) }
+func NewNumber() Number                   { return Number(0) }
+func NewNumberFromFloat(v float64) Number { return Number(v) }
+func NewNumberFromInt(v int) Number       { return Number(v) }
 
-type BoolObject bool
+type Bool bool
 
-func (o BoolObject) Truthy() bool                   { return bool(o) }
-func (o BoolObject) Nil() bool                      { return false }
-func (o BoolObject) Send(Method, ArgsObject) Object { return nil }
-func (o BoolObject) Eval(*Vm) (Object, error)       { return o, nil }
+func (o Bool) Truthy() bool             { return bool(o) }
+func (o Bool) IsNil() bool              { return false }
+func (o Bool) Send(Method, Args) Object { return nil }
+func (o Bool) Eval(*Vm) (Object, error) { return o, nil }
 
-func BoolObjectFromBool(v bool) BoolObject { return BoolObject(v) }
+func NewBool() Bool               { return false }
+func NewBoolFromBool(v bool) Bool { return Bool(v) }
