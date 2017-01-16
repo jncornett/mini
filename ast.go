@@ -89,7 +89,11 @@ func (e *CallExpr) Eval(vm *Vm) (Object, error) {
 type Symbol string
 
 func (e Symbol) Eval(vm *Vm) (Object, error) {
-	return vm.Lookup(e), nil
+	obj := vm.Lookup(e)
+	if obj == nil {
+		return NIL, nil
+	}
+	return obj, nil
 }
 
 type NotExpr struct {
