@@ -10,7 +10,7 @@ func (o Function) Truthy() bool { return o != nil }
 func (o Function) IsNil() bool { return false }
 
 // Send helps Function implement the Object interface
-func (o Function) Send(Op, Args) Object { return nil }
+func (o Function) Send(Op, Args) (Object, error) { return nil, nil }
 
 // Call helps Function implement the Callable interface
 func (o Function) Call(args Args) (Object, error) { return o(args) }

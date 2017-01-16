@@ -10,7 +10,7 @@ func (o Args) Truthy() bool { return !o.Empty() }
 func (o Args) IsNil() bool { return false }
 
 // Send helps Args implement the Object interface.
-func (o Args) Send(Op, Args) Object { return nil }
+func (o Args) Send(Op, Args) (Object, error) { return nil, nil }
 
 // Eval helps Args implement the Expression interface.
 func (o Args) Eval(*Vm) (Object, error) { return o, nil }

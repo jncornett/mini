@@ -7,5 +7,5 @@ type Op int
 type Object interface {
 	Truthy() bool
 	IsNil() bool
-	Send(m Op, args Args) Object
+	Send(m Op, args Args) (Object, error)
 }

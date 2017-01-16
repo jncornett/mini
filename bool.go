@@ -17,7 +17,7 @@ func (o Bool) Truthy() bool { return bool(o) }
 func (o Bool) IsNil() bool { return false }
 
 // Send helps Bool implement the Object interface
-func (o Bool) Send(Op, Args) Object { return nil }
+func (o Bool) Send(Op, Args) (Object, error) { return nil, nil }
 
 // Eval helps Bool implement the Expression interface
 func (o Bool) Eval(*Vm) (Object, error) { return o, nil }

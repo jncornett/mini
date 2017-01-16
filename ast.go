@@ -92,6 +92,35 @@ func (e Symbol) Eval(vm *Vm) (Object, error) {
 	return vm.Lookup(e), nil
 }
 
+type OpExpr struct {
+	Base Expression
+	Args []Expression
+	Op   Op
+}
+
+func (e OpExpr) Eval(vm *Vm) (Object, error) {
+	lhs, err := e.Base.Eval(vm)
+	if err != nil {
+		return nil, err
+	}
+	var args Args
+	for _, expr := range e.Args {
+		obj, err := expr.Eval(vm)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, obj) // FIXME implement args.Append or args.Push?
+	}
+	ret, err := lhs.Send(e.Op, args)
+	if err != nil {
+		return nil, err
+	}
+	if ret == nil {
+		return nil, NewErrInvalidOp(e.Op, lhs)
+	}
+	return ret, nil
+}
+
 func evalBranch(cb ConditionalBlock, vm *Vm) (bool, Object, error) {
 	if cb.Condition == nil {
 		return false, NIL, nil

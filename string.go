@@ -10,7 +10,7 @@ func (o String) Truthy() bool { return true }
 func (o String) IsNil() bool { return false }
 
 // Send helps String implement the Object interface
-func (o String) Send(Op, Args) Object { return nil }
+func (o String) Send(Op, Args) (Object, error) { return nil, nil }
 
 // Eval helps String implement the Expression interface
 func (o String) Eval(*Vm) (Object, error) { return o, nil }

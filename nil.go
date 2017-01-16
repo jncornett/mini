@@ -13,7 +13,7 @@ func (o Nil) Truthy() bool { return false }
 func (o Nil) IsNil() bool { return true }
 
 // Send helps Nil implement the Object interface.
-func (o Nil) Send(Op, Args) Object { return nil }
+func (o Nil) Send(Op, Args) (Object, error) { return nil, nil }
 
 // Eval helps Nil implement the Expression interface.
 func (o Nil) Eval(*Vm) (Object, error) { return o, nil }

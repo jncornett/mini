@@ -12,7 +12,7 @@ func (o Number) Truthy() bool { return true }
 func (o Number) IsNil() bool { return false }
 
 // Send helps Number implement the Object interface
-func (o Number) Send(Op, Args) Object { return nil }
+func (o Number) Send(Op, Args) (Object, error) { return nil, nil }
 
 // Eval helps Number implement the Expression interface
 func (o Number) Eval(*Vm) (Object, error) { return o, nil }
