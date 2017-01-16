@@ -18,8 +18,7 @@ func (e *CallExpr) String() string {
 }
 
 func (e *ConstExpr) String() string {
-	val := e.Value.Value()
-	return fmt.Sprintf("#(%v)%+v", reflect.TypeOf(val).Name(), val)
+	return fmt.Sprintf("#(%v)%+v", reflect.TypeOf(*e).Name(), *e)
 }
 
 func (e *AssignExpr) String() string {

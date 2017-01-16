@@ -46,7 +46,7 @@ func (vm *Vm) Lookup(sym string) Object {
 	return vm.Symbols[sym]
 }
 
-func (vm *Vm) Call(sym string, args []Object) (Object, error) {
+func (vm *Vm) Call(sym string, args ArgsObject) (Object, error) {
 	fn, ok := vm.Lookup(sym).(Callable)
 	if !ok {
 		return nil, fmt.Errorf("TypeError: %v is not a function", sym)

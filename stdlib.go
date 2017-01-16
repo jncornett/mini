@@ -6,6 +6,10 @@ import (
 	"reflect"
 )
 
+var (
+	numberType = reflect.TypeOf(NumberObject(0))
+)
+
 type StdlibEntry struct {
 	Name string
 	Func FunctionObject
@@ -17,25 +21,29 @@ func GetStdlib() []StdlibEntry {
 		// builtins
 		{
 			"__not",
-			func(args []Object) (Object, error) {
-				return BoolObject(!GetBoolValue(getArg(args, 0))), nil
+			func(args ArgsObject) (Object, error) {
+				return BoolObjectFromBool(args.Arg(0).Truthy()), nil
 			},
 		},
 		{
 			"__neg",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
+				num, ok := args.Arg(0).(NumberObject)
 				// currently only defined for numbers
+				if !ok {
+					return nil, typeError(numberType, num)
+				}
 				switch v := getArg(args, 0).(type) {
 				case NumberObject:
 					return NumberObject(-int(v)), nil
 				default:
-					return nil, typeError("number", v)
+					return nil, typeError(numberType, num)
 				}
 			},
 		},
 		{
 			"__add",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -46,7 +54,7 @@ func GetStdlib() []StdlibEntry {
 		},
 		{
 			"__sub",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -57,7 +65,7 @@ func GetStdlib() []StdlibEntry {
 		},
 		{
 			"__mul",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -68,7 +76,7 @@ func GetStdlib() []StdlibEntry {
 		},
 		{
 			"__div",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -82,7 +90,7 @@ func GetStdlib() []StdlibEntry {
 		},
 		{
 			"__lt",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -93,7 +101,7 @@ func GetStdlib() []StdlibEntry {
 		},
 		{
 			"__le",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -104,7 +112,7 @@ func GetStdlib() []StdlibEntry {
 		},
 		{
 			"__gt",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -115,7 +123,7 @@ func GetStdlib() []StdlibEntry {
 		},
 		{
 			"__ge",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				// currently only defined for numbers
 				lhs, rhs, err := getTwoIntArgs(args)
 				if err != nil {
@@ -126,40 +134,42 @@ func GetStdlib() []StdlibEntry {
 		},
 		{
 			"__eq",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				return BoolObject(reflect.DeepEqual(getArg(args, 0), getArg(args, 1))), nil
 			},
 		},
 		{
 			"__ne",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				return BoolObject(!reflect.DeepEqual(getArg(args, 0), getArg(args, 1))), nil
 			},
 		},
 		{
 			"__and",
-			func(args []Object) (Object, error) {
-				lhs := GetBoolValue(getArg(args, 0))
-				if !lhs {
-					return BoolObject(false), nil // Shortcircuit
-				}
-				rhs := GetBoolValue(getArg(args, 1))
-				if !rhs {
+			func(args ArgsObject) (Object, error) {
+				lhs := args.Arg(0)
+				if !lhs.Truthy() {
+					// short circuit if we can
 					return BoolObject(false), nil
 				}
-				return getArg(args, 1), nil
+				rhs := args.Arg(1)
+				if !rhs.Truthy() {
+					return BoolObject(false), nil
+				}
+				return rhs, nil
 			},
 		},
 		{
 			"__or",
-			func(args []Object) (Object, error) {
-				lhs := GetBoolValue(getArg(args, 0))
-				if lhs {
-					return getArg(args, 0), nil // Shortcircuit
+			func(args ArgsObject) (Object, error) {
+				lhs := args.Arg(0)
+				if lhs.Truthy() {
+					// short circuit if possible
+					return lhs, nil
 				}
-				rhs := GetBoolValue(getArg(args, 1))
-				if rhs {
-					return getArg(args, 1), nil
+				rhs := args.Arg(1)
+				if rhs.Truthy() {
+					return rhs, nil
 				}
 				return BoolObject(false), nil
 			},
@@ -167,7 +177,7 @@ func GetStdlib() []StdlibEntry {
 		// stdlib
 		{
 			"print",
-			func(args []Object) (Object, error) {
+			func(args ArgsObject) (Object, error) {
 				_, err := fmt.Println(objectsToEmpties(args)...)
 				return nil, err
 			},
@@ -175,42 +185,38 @@ func GetStdlib() []StdlibEntry {
 	}
 }
 
-func objectsToEmpties(args []Object) []interface{} {
+func objectsToEmpties(args ArgsObject) []interface{} {
 	var out []interface{}
 	for _, arg := range args {
-		out = append(out, arg.Value())
+		out = append(out, arg)
 	}
 	return out
 }
 
-func getArg(args []Object, n int) Object {
+func getArg(args ArgsObject, n int) Object {
 	if n < 0 || n >= len(args) {
 		return nil
 	}
 	return args[n]
 }
 
-func getTwoIntArgs(args []Object) (int, int, error) {
+func getTwoIntArgs(args ArgsObject) (int, int, error) {
 	var lhs, rhs int
 	switch v := getArg(args, 0).(type) {
 	case NumberObject:
 		lhs = int(v)
 	default:
-		return 0, 0, typeError("number", v)
+		return 0, 0, typeError(numberType, v)
 	}
 	switch v := getArg(args, 1).(type) {
 	case NumberObject:
 		rhs = int(v)
 	default:
-		return 0, 0, typeError("number", v)
+		return 0, 0, typeError(numberType, v)
 	}
 	return lhs, rhs, nil
 }
 
-func getTwoBoolValues(args []Object) (bool, bool) {
-	return GetBoolValue(getArg(args, 0)), GetBoolValue(getArg(args, 1))
-}
-
-func typeError(expected string, actual interface{}) error {
-	return fmt.Errorf("TypeError: expected %v, got %T", expected, actual)
+func typeError(want reflect.Type, have interface{}) error {
+	return fmt.Errorf("Wrong type, want %v, have (%T)(%v)", want, have, have)
 }

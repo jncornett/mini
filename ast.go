@@ -1,10 +1,5 @@
 package mini
 
-type Object interface {
-	BoolValue() bool
-	Value() interface{}
-}
-
 type Expression interface {
 	// FIXME maybe replace interface{} with an Object type
 	Eval(*Vm) (Object, error) // walk the children
@@ -36,7 +31,7 @@ func (e *IfExpr) Eval(vm *Vm) (Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	if GetBoolValue(obj) {
+	if obj != nil && obj.Truthy() {
 		if e.IfBlock != nil {
 			return e.IfBlock.Eval(vm)
 		}
@@ -45,7 +40,7 @@ func (e *IfExpr) Eval(vm *Vm) (Object, error) {
 		if err != nil {
 			return nil, err
 		}
-		if GetBoolValue(obj) {
+		if obj != nil && obj.Truthy() {
 			if e.ElseBlock != nil {
 				return e.ElseBlock.Eval(vm)
 			}
@@ -70,7 +65,7 @@ func (e *ForExpr) Eval(vm *Vm) (Object, error) {
 		if err != nil {
 			break
 		}
-		if !GetBoolValue(cond) {
+		if cond == nil || !cond.Truthy() {
 			break
 		}
 		obj, err = e.Block.Eval(vm)
