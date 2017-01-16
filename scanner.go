@@ -6,6 +6,8 @@ import (
 	"io"
 )
 
+const EOFCHAR = rune(0)
+
 type TokenType int
 
 type Position struct {
@@ -18,12 +20,11 @@ type Token struct {
 	Value string
 	Start Position
 	End   Position
-}
+
 
 const (
 	// Special tokens
 	ILLEGAL TokenType = iota
-	START
 	EOF
 	WS
 
@@ -58,8 +59,8 @@ const (
 	IF
 	ELSE
 	FOR
-	BREAK
-	CONTINUE
+	BREAK    // FIXME implement break
+	CONTINUE // FIXME implement continue
 	AND
 	OR
 )
@@ -262,8 +263,6 @@ func (s *Scanner) scanNumberLiteral(first rune, start Position) Token {
 	}
 	return Token{NUMBER, buf.String(), start, s.pos}
 }
-
-const EOFCHAR = rune(0)
 
 func isWhitespace(ch rune) bool {
 	return ch == ' ' || ch == '\t' || ch == '\n'
