@@ -16,9 +16,9 @@ type Vm struct {
 }
 
 func NewVm() *Vm {
-	return &Vm{
-		Symbols: getDefaultSymbols(),
-	}
+	vm := &Vm{}
+	vm.LoadLib(StdLib)
+	return vm
 }
 
 func (vm *Vm) Eval(r io.Reader) error {
@@ -56,10 +56,8 @@ func (vm *Vm) Call(sym Symbol, args Args) (Object, error) {
 	return fn.Call(args)
 }
 
-func getDefaultSymbols() SymbolTable {
-	symbols := make(SymbolTable)
-	for _, entry := range GetStdlib() {
-		symbols[entry.Name] = entry.Func
+func (vm *Vm) LoadLib(entries []Entry) {
+	for _, entry := range entries {
+		vm.Assign(entry.Name, entry.Func)
 	}
-	return symbols
 }
